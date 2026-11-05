@@ -95,7 +95,11 @@ def _parse_wiring_yaml(wiring_path: Path) -> dict[str, SubsystemSpec]:
                         in_deps_list = False
                     else:
                         in_deps_list = True
-            elif indent >= 4 and in_deps_list and stripped.startswith("-"):
+                elif in_deps_list and stripped.startswith("-"):
+                    dep_val = stripped[1:].strip().strip("\"'")
+                    if dep_val:
+                        cur_deps.append(dep_val)
+            elif indent > 4 and in_deps_list and stripped.startswith("-"):
                 dep_val = stripped[1:].strip().strip("\"'")
                 if dep_val:
                     cur_deps.append(dep_val)

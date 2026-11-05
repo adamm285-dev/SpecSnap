@@ -3,7 +3,9 @@
     "rows_verified": 12,
     "task_tiers_verified": 4,
     "errors": [],
-    "all_valid": true
+    "all_valid": true,
+    "baseline_evaluation_seed": 1001,
+    "active_evaluation_seed": 2002
   },
   "leaderboard": [
     {
