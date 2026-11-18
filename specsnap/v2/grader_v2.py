@@ -262,13 +262,36 @@ def _deco_name(d: ast.expr) -> str:
     return ast.unparse(d) if hasattr(ast, "unparse") else ""
 
 
-def _is_real_test(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _is_real_test(
+    fn: ast.FunctionDef | ast.AsyncFunctionDef,
+    imported_sut_symbols: set[str] | None = None,
+) -> bool:
     """
-    Check if a test function contains a non-trivial, non-tautological assertion
+    Check if a test function contains a non-trivial, non-tautological, non-vacuous assertion
     or a non-trivial pytest.raises context, skipping statically unreachable branches.
+    Also enforces System Under Test (SUT) grounding by requiring that the test invokes at least
+    one callable or class from imported codebase modules (preventing hollow mock-only tests).
     """
     def _dump(n: ast.AST) -> str:
         return ast.dump(n, include_attributes=False)
+
+    # 1. Enforce SUT grounding if codebase symbols were identified in imports
+    if imported_sut_symbols:
+        exercises_sut = False
+        for c in ast.walk(fn):
+            if isinstance(c, ast.Call):
+                if isinstance(c.func, ast.Name) and c.func.id in imported_sut_symbols:
+                    exercises_sut = True
+                    break
+                if (
+                    isinstance(c.func, ast.Attribute)
+                    and isinstance(c.func.value, ast.Name)
+                    and c.func.value.id in imported_sut_symbols
+                ):
+                    exercises_sut = True
+                    break
+        if not exercises_sut:
+            return False
 
     def _has_real_assert(nodes: list[ast.stmt]) -> bool:
         for stmt in nodes:
@@ -298,6 +321,16 @@ def _is_real_test(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
                     isinstance(stmt.test, ast.Compare)
                     and len(stmt.test.comparators) == 1
                     and _dump(stmt.test.left) == _dump(stmt.test.comparators[0])
+                ):
+                    continue
+                # Vacuous presence check: assert x is not None (without accompanying property checks)
+                if (
+                    isinstance(stmt.test, ast.Compare)
+                    and len(stmt.test.ops) == 1
+                    and isinstance(stmt.test.ops[0], ast.IsNot)
+                    and len(stmt.test.comparators) == 1
+                    and isinstance(stmt.test.comparators[0], ast.Constant)
+                    and stmt.test.comparators[0].value is None
                 ):
                     continue
                 has_call = any(isinstance(c, ast.Call) for c in ast.walk(stmt.test))
@@ -341,6 +374,7 @@ def _check_added_stmt(
     rel_p: str,
     reasons: list[str],
     orig_names: set[str],
+    imported_sut_symbols: set[str] | None = None,
 ) -> None:
     # 1. Imports are allowed if they don't rebind baseline or banned names
     if isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -374,8 +408,8 @@ def _check_added_stmt(
         if bad_decos:
             bad_names = [_deco_name(d) for d in bad_decos]
             reasons.append(f"{rel_p}: prohibited decorator(s) {bad_names} on function '{node.name}'")
-        if not _is_real_test(node):
-            reasons.append(f"{rel_p}: added test function '{node.name}' is hollow (no non-trivial assertion)")
+        if not _is_real_test(node, imported_sut_symbols=imported_sut_symbols):
+            reasons.append(f"{rel_p}: added test function '{node.name}' is hollow (lacks non-vacuous assertion or fails SUT grounding)")
         # Check for forbidden calls
         for c in ast.walk(node):
             if isinstance(c, ast.Call):
@@ -413,8 +447,8 @@ def _check_added_stmt(
                 bad_m_decos = [d for d in m.decorator_list if _deco_name(d) not in ALLOWED_DECOS]
                 if bad_m_decos:
                     reasons.append(f"{rel_p}: prohibited decorator on method '{node.name}.{m.name}'")
-                if not _is_real_test(m):
-                    reasons.append(f"{rel_p}: hollow test method '{node.name}.{m.name}'")
+                if not _is_real_test(m, imported_sut_symbols=imported_sut_symbols):
+                    reasons.append(f"{rel_p}: hollow test method '{node.name}.{m.name}' (lacks non-vacuous assertion or fails SUT grounding)")
                 for c in ast.walk(m):
                     if isinstance(c, ast.Call):
                         call_id = c.func.id if isinstance(c.func, ast.Name) else ""
@@ -488,6 +522,16 @@ def _check_baseline_file(
     orig_body_dumps = [_dump(n) for n in orig_ast.body]
     orig_names = {n.name for n in orig_ast.body if hasattr(n, "name")}
 
+    # Extract codebase SUT symbols from imports across target_ast
+    sut_symbols: set[str] = set()
+    for n in target_ast.body:
+        if isinstance(n, (ast.Import, ast.ImportFrom)):
+            mod = getattr(n, "module", "") or ""
+            if mod.startswith(("pytest", "unittest", "sys", "os", "pathlib", "typing", "tempfile")):
+                continue
+            for a in n.names:
+                sut_symbols.add(a.asname or a.name.split(".")[0])
+
     # 1. Baseline statements must appear in exact order, unaltered or monotonically extended
     i = 0
     for node in target_ast.body:
@@ -504,7 +548,7 @@ def _check_baseline_file(
                 if _is_monotonic_function_extension(orig_node, node, rel_p, reasons):
                     i += 1
                     continue
-        _check_added_stmt(node, rel_p, reasons, orig_names)
+        _check_added_stmt(node, rel_p, reasons, orig_names, imported_sut_symbols=sut_symbols)
 
     if i != len(orig_body_dumps):
         reasons.append(
