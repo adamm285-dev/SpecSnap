@@ -120,11 +120,13 @@ function renderHeroLeaderboard() {
       const overallId = `overall-${m.id}`;
       const t4Run = findRun(4, m.id);
       const isSel = state.selectedRunId === overallId || (t4Run && state.selectedRunId === t4Run.id);
-      let rankBadge = `#${idx + 1} Overall`;
-      if (idx === 0) {
-        rankBadge = `<span style="color:#60A5FA;font-weight:700;">#1 Overall (Winner)</span>`;
+let rankBadge = `#${idx + 1} Overall`;
+      if (m.id === "codex_6_2") {
+        rankBadge = `<span style="color:#10B981;font-weight:700;">#1 Overall (Tied) · #1 Efficiency (10.0% TES)</span>`;
+      } else if (m.id === "carbon") {
+        rankBadge = `<span style="color:#60A5FA;font-weight:700;">#1 Overall (Tied)</span>`;
       } else if (m.id === "hydrogen") {
-        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#2 Overall · #1 Efficiency (8.6% TES)</span>`;
+        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#3 Overall (Tied) · 8.6% TES</span>`;
       }
 
       html += `
