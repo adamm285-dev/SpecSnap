@@ -120,18 +120,7 @@ function renderHeroLeaderboard() {
       const overallId = `overall-${m.id}`;
       const t4Run = findRun(4, m.id);
       const isSel = state.selectedRunId === overallId || (t4Run && state.selectedRunId === t4Run.id);
-let rankBadge = `#${idx + 1} Overall`;
-      if (m.id === "codex_6_2") {
-        rankBadge = `<span style="color:#10B981;font-weight:700;">#1 Overall · Tied #1 Retention</span>`;
-      } else if (m.id === "neon") {
-        rankBadge = `<span style="color:#34D399;font-weight:700;">#2 Overall · Tied #1 Retention</span>`;
-      } else if (m.id === "carbon") {
-        rankBadge = `<span style="color:#60A5FA;font-weight:700;">#3 Overall · Tied #1 Retention</span>`;
-      } else if (m.id === "hydrogen") {
-        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#4 Overall · Tied #4 Retention</span>`;
-      } else if (m.id === "gemini") {
-        rankBadge = `<span style="color:#94A3B8;font-weight:700;">#5 Overall · Tied #4 Retention</span>`;
-      }
+      let rankBadge = `#${idx + 1} Overall`;
 
       html += `
         <div class="lb-model-group ${isSel ? "selected" : ""}" data-lb-run="${overallId}" role="button" tabindex="0">
