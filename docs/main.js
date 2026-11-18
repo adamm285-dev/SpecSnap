@@ -233,7 +233,21 @@ function renderSyntheticTable() {
       { t: 4, max: 36 }
     ];
 
-    const models = DATA.models;
+    // Sort models descending by total net retention, then TES, then tokens
+    const sumModelNet = (mId) => [1, 2, 3, 4].reduce((acc, t) => acc + (findRun(t, mId)?.net || 0), 0);
+    const sumModelTes = (mId) => [1, 2, 3, 4].reduce((acc, t) => {
+      const r = findRun(t, mId);
+      return acc + (r ? r.tes * r.maxReqs : 0);
+    }, 0) / 70.0;
+    const sumModelTokens = (mId) => [1, 2, 3, 4].reduce((acc, t) => acc + (findRun(t, mId)?.tokens || 0), 0);
+
+    const models = [...DATA.models].sort((a, b) => {
+      const netDiff = sumModelNet(b.id) - sumModelNet(a.id);
+      if (netDiff !== 0) return netDiff;
+      const tesDiff = sumModelTes(b.id) - sumModelTes(a.id);
+      if (Math.abs(tesDiff) > 1e-6) return tesDiff;
+      return sumModelTokens(a.id) - sumModelTokens(b.id);
+    });
 
     let html = `
       <table class="cad-table">
@@ -307,11 +321,17 @@ function renderSyntheticTable() {
 
   // Detailed Single-Tier or Filtered Table
   const tierNum = Number(state.tableTierFilter);
-  const rows = DATA.syntheticRuns.filter(
-    (r) =>
-      r.tier === tierNum &&
-      (state.tableModelFilter === "all" || r.modelId === state.tableModelFilter)
-  );
+  const rows = DATA.syntheticRuns
+    .filter(
+      (r) =>
+        r.tier === tierNum &&
+        (state.tableModelFilter === "all" || r.modelId === state.tableModelFilter)
+    )
+    .sort((a, b) => {
+      if (b.net !== a.net) return b.net - a.net;
+      if (Math.abs((b.tes || 0) - (a.tes || 0)) > 1e-6) return (b.tes || 0) - (a.tes || 0);
+      return (a.tokens || 0) - (b.tokens || 0);
+    });
 
   let html = `
     <table class="cad-table">
@@ -511,4 +531,4 @@ document.querySelectorAll("#model-filter-tabs .pill-btn").forEach((btn) => {
 renderHeroLeaderboard();
 renderSyntheticTable();
 renderLimitations();
-selectRunById("t4-gemini");
+selectRunById("t4-codex_6_2");
