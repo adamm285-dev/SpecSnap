@@ -128,7 +128,9 @@ let rankBadge = `#${idx + 1} Overall`;
       } else if (m.id === "carbon") {
         rankBadge = `<span style="color:#60A5FA;font-weight:700;">#3 Overall · Tied #1 Retention</span>`;
       } else if (m.id === "hydrogen") {
-        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#4 Overall (Tied)</span>`;
+        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#4 Overall · Tied #4 Retention</span>`;
+      } else if (m.id === "gemini") {
+        rankBadge = `<span style="color:#94A3B8;font-weight:700;">#5 Overall · Tied #4 Retention</span>`;
       }
 
       html += `
