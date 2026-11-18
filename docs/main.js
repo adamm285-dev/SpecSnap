@@ -123,10 +123,12 @@ function renderHeroLeaderboard() {
 let rankBadge = `#${idx + 1} Overall`;
       if (m.id === "codex_6_2") {
         rankBadge = `<span style="color:#10B981;font-weight:700;">#1 Overall (Tied) · #1 Efficiency (10.0% TES)</span>`;
+      } else if (m.id === "neon") {
+        rankBadge = `<span style="color:#34D399;font-weight:700;">#1 Overall (Tied) · #1 Efficiency (10.0% TES)</span>`;
       } else if (m.id === "carbon") {
         rankBadge = `<span style="color:#60A5FA;font-weight:700;">#1 Overall (Tied)</span>`;
       } else if (m.id === "hydrogen") {
-        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#3 Overall (Tied) · 8.6% TES</span>`;
+        rankBadge = `<span style="color:#38BDF8;font-weight:700;">#4 Overall (Tied) · 8.6% TES</span>`;
       }
 
       html += `
